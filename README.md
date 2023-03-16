@@ -1,6 +1,7 @@
-# Getting Started with Create React App
-
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Technical decisions
+Project is using **React (TypeScript)** framework.
+For styling **MUI** was chosen as it will cover all needs.
+**MobX** was chosen for state management because the author is more experienced in it.
 
 ## Available Scripts
 
