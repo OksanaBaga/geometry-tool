@@ -5,17 +5,22 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import ListItem from '@mui/material/ListItem';
 
-import { IAction } from '../../types';
+import { IAction } from '../../interfaces';
 
 interface IActionItemProps extends IAction {
   open?: boolean;
 }
 
 const ActionItem = (props: IActionItemProps): JSX.Element => {
-  const { open, title, iconElement, handler } = props;
+  const { open, title, iconElement, handler, selected } = props;
 
   return (
-    <ListItem disablePadding sx={{ display: 'block' }} onClick={handler}>
+    <ListItem
+      disablePadding
+      sx={{ display: 'block' }}
+      onClick={handler}
+      selected={selected}
+    >
       <ListItemButton
         sx={{
           minHeight: 48,

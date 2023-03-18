@@ -1,45 +1,30 @@
 import React from 'react';
 
 import { List } from '@mui/material';
-import NavigationIcon from '@mui/icons-material/Navigation';
-import ControlCameraIcon from '@mui/icons-material/ControlCamera';
-import CodeIcon from '@mui/icons-material/Code';
+import { observer } from 'mobx-react-lite';
 
-import { IAction } from '../../types';
 import ActionItem from '../ActionItem/ActionItem';
+import { useRootStore } from '../../context/AppStateContext';
+import { ITool } from '../../interfaces/tool.interfaces';
+import { getToolIcon } from '../../utils/tools';
 
-const EditionToolList = ({ open }: any): JSX.Element => {
-  const editionActions: IAction[] = [
-    {
-      title: 'Select',
-      iconElement: <NavigationIcon />,
-      handler: () => {
-        console.log('Select');
-      },
-    },
-    {
-      title: 'Move',
-      iconElement: <ControlCameraIcon />,
-      handler: () => {
-        console.log('Move');
-      },
-    },
-    {
-      title: 'Closest points',
-      iconElement: <CodeIcon />,
-      handler: () => {
-        console.log('Closest points');
-      },
-    },
-  ];
+const EditionToolList = (): JSX.Element => {
+  const { editToolStore, uiStore } = useRootStore();
 
   return (
     <List>
-      {editionActions.map((action: IAction) => (
-        <ActionItem key={action.title} open={open} {...action} />
+      {editToolStore.tools.map((tool: ITool) => (
+        <ActionItem
+          key={tool.title}
+          open={uiStore.isLeftNavOpen}
+          iconElement={getToolIcon(tool.type)}
+          handler={() => editToolStore.setSelectedTool(tool)}
+          selected={editToolStore.selectedTool?.type === tool.type}
+          {...tool}
+        />
       ))}
     </List>
   );
 };
 
-export default EditionToolList;
+export default observer(EditionToolList);

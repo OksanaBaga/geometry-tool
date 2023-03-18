@@ -3,26 +3,24 @@ import React from 'react';
 import { Toolbar, Typography } from '@mui/material';
 import IconButton from '@mui/material/IconButton';
 import MenuIcon from '@mui/icons-material/Menu';
+import { observer } from 'mobx-react-lite';
 
+import { useRootStore } from '../../context/AppStateContext';
 import { AppBarStyled } from './Header.styles';
 
-interface IHeaderProps {
-  open?: boolean;
-  onClick?: () => void;
-}
-
-function Header({ open, onClick }: IHeaderProps): JSX.Element {
+function Header(): JSX.Element {
+  const { uiStore } = useRootStore();
   return (
-    <AppBarStyled position="fixed" open={open}>
+    <AppBarStyled position="fixed" open={uiStore.isLeftNavOpen}>
       <Toolbar>
         <IconButton
           color="inherit"
           aria-label="open drawer"
-          onClick={onClick}
+          onClick={() => uiStore.setLeftNavOpen(true)}
           edge="start"
           sx={{
             marginRight: 5,
-            ...(open && { display: 'none' }),
+            ...(uiStore.isLeftNavOpen && { display: 'none' }),
           }}
         >
           <MenuIcon />
@@ -35,4 +33,4 @@ function Header({ open, onClick }: IHeaderProps): JSX.Element {
   );
 }
 
-export default Header;
+export default observer(Header);

@@ -1,5 +1,8 @@
-export interface IAction {
-  title: string;
-  iconElement: JSX.Element;
-  handler: () => void;
+export enum EditToolTypes {
+  SELECT = 'SELECT',
+  MOVE = 'MOVE',
+  CLOSEST_POINT = 'CLOSEST_POINT',
+  TRIANGLE = 'TRIANGLE',
+  SQUARE = 'SQUARE',
+  HEXAGON = 'HEXAGON',
 }

@@ -15,24 +15,14 @@ interface ILayoutProps {
 function Layout(props: ILayoutProps): JSX.Element {
   const { children } = props;
 
-  const [open, setOpen] = React.useState(false);
-
-  const handleDrawerOpen = () => {
-    setOpen(true);
-  };
-
-  const handleDrawerClose = () => {
-    setOpen(false);
-  };
-
   return (
     <LayoutWrapper>
       <Box sx={{ display: 'flex' }}>
         <CssBaseline />
 
-        <Header open={open} onClick={handleDrawerOpen} />
+        <Header />
 
-        <LeftNav open={open} onClose={handleDrawerClose} />
+        <LeftNav />
 
         <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
           <DrawerHeader />

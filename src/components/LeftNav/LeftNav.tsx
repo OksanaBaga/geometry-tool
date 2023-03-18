@@ -5,23 +5,21 @@ import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { observer } from 'mobx-react-lite';
 
 import { DrawerHeader, DrawerStyled } from './LeftNav.styles';
 import EditionToolList from '../EditionToolList/EditionToolList';
 import AdditionToolList from '../AdditionToolList/AdditionToolList';
+import { useRootStore } from '../../context/AppStateContext';
 
-interface ILeftNavProps {
-  open?: boolean;
-  onClose?: () => void;
-}
-
-const LeftNav = ({ open, onClose }: ILeftNavProps): JSX.Element => {
+const LeftNav = (): JSX.Element => {
   const theme = useTheme();
+  const { uiStore } = useRootStore();
 
   return (
-    <DrawerStyled variant="permanent" open={open}>
+    <DrawerStyled variant="permanent" open={uiStore.isLeftNavOpen}>
       <DrawerHeader>
-        <IconButton onClick={onClose}>
+        <IconButton onClick={() => uiStore.setLeftNavOpen(false)}>
           {theme.direction === 'rtl' ? (
             <ChevronRightIcon />
           ) : (
@@ -32,13 +30,13 @@ const LeftNav = ({ open, onClose }: ILeftNavProps): JSX.Element => {
 
       <Divider />
 
-      <EditionToolList open={open} />
+      <EditionToolList />
 
       <Divider />
 
-      <AdditionToolList open={open} />
+      <AdditionToolList />
     </DrawerStyled>
   );
 };
 
-export default LeftNav;
+export default observer(LeftNav);

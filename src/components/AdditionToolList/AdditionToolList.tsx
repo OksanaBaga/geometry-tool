@@ -1,45 +1,30 @@
 import React from 'react';
 
 import { List } from '@mui/material';
-import ChangeHistoryTwoToneIcon from '@mui/icons-material/ChangeHistoryTwoTone';
-import SquareTwoToneIcon from '@mui/icons-material/SquareTwoTone';
-import HexagonTwoToneIcon from '@mui/icons-material/HexagonTwoTone';
+import { observer } from 'mobx-react-lite';
 
-import { IAction } from '../../types';
 import ActionItem from '../ActionItem/ActionItem';
+import { useRootStore } from '../../context/AppStateContext';
+import { ITool } from '../../interfaces/tool.interfaces';
+import { getToolIcon } from '../../utils/tools';
 
-const AdditionToolList = ({ open }: any): JSX.Element => {
-  const additionActions: IAction[] = [
-    {
-      title: 'Triangle',
-      iconElement: <ChangeHistoryTwoToneIcon />,
-      handler: () => {
-        console.log('Triangle');
-      },
-    },
-    {
-      title: 'Square',
-      iconElement: <SquareTwoToneIcon />,
-      handler: () => {
-        console.log('Square');
-      },
-    },
-    {
-      title: 'Hexagon',
-      iconElement: <HexagonTwoToneIcon />,
-      handler: () => {
-        console.log('Hexagon');
-      },
-    },
-  ];
+const AdditionToolList = (): JSX.Element => {
+  const { addToolStore, uiStore } = useRootStore();
 
   return (
     <List>
-      {additionActions.map((action: IAction) => (
-        <ActionItem key={action.title} open={open} {...action} />
+      {addToolStore.tools.map((tool: ITool) => (
+        <ActionItem
+          key={tool.title}
+          open={uiStore.isLeftNavOpen}
+          iconElement={getToolIcon(tool.type)}
+          handler={() => addToolStore.setSelectedTool(tool)}
+          selected={addToolStore.selectedTool?.type === tool.type}
+          {...tool}
+        />
       ))}
     </List>
   );
 };
 
-export default AdditionToolList;
+export default observer(AdditionToolList);
