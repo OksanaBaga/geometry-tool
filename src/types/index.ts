@@ -6,3 +6,8 @@ export enum EditToolTypes {
   SQUARE = 'SQUARE',
   HEXAGON = 'HEXAGON',
 }
+
+export type TShape =
+  | EditToolTypes.SQUARE
+  | EditToolTypes.HEXAGON
+  | EditToolTypes.TRIANGLE;

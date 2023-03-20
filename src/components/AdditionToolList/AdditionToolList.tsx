@@ -7,9 +7,10 @@ import ActionItem from '../ActionItem/ActionItem';
 import { useRootStore } from '../../context/AppStateContext';
 import { ITool } from '../../interfaces/tool.interfaces';
 import { getToolIcon } from '../../utils/tools';
+import { TShape } from '../../types';
 
 const AdditionToolList = (): JSX.Element => {
-  const { addToolStore, uiStore } = useRootStore();
+  const { addToolStore, uiStore, sceneStore } = useRootStore();
 
   return (
     <List>
@@ -18,8 +19,7 @@ const AdditionToolList = (): JSX.Element => {
           key={tool.title}
           open={uiStore.isLeftNavOpen}
           iconElement={getToolIcon(tool.type)}
-          handler={() => addToolStore.setSelectedTool(tool)}
-          selected={addToolStore.selectedTool?.type === tool.type}
+          handler={() => sceneStore.addShape(tool.type as TShape)}
           {...tool}
         />
       ))}

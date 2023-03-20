@@ -2,6 +2,10 @@ import * as THREE from 'three';
 import { makeAutoObservable, when } from 'mobx';
 
 import { IRootStore, ISceneStore } from '../interfaces/stores.interfaces';
+import { EditToolTypes, TShape } from '../types';
+import SquareShape from './shapes/SquareShape';
+import TriangleShape from './shapes/TriangleShape';
+import HexagonShape from './shapes/HexagonShape';
 
 class SceneStore implements ISceneStore {
   private scene?: THREE.Scene;
@@ -28,6 +32,35 @@ class SceneStore implements ISceneStore {
         }
       }
     );
+  }
+
+  public addShape(shapeType: TShape): void {
+    if (!this.scene) return;
+
+    const color = '#eef4fc';
+
+    let mesh: THREE.Mesh;
+
+    switch (shapeType) {
+      case EditToolTypes.SQUARE:
+        mesh = new SquareShape(color, 1, 1).mesh;
+
+        this.scene.add(mesh);
+        break;
+      case EditToolTypes.TRIANGLE:
+        mesh = new TriangleShape(color, 1, 1).mesh;
+
+        this.scene.add(mesh);
+        break;
+      case EditToolTypes.HEXAGON:
+        mesh = new HexagonShape(color, 1, 1).mesh;
+
+        this.scene.add(mesh);
+        break;
+      default:
+        console.warn(`${shapeType} is not supported yet!`);
+        break;
+    }
   }
 
   public setCanvasRef(canvasRef?: HTMLCanvasElement): void {
@@ -58,10 +91,8 @@ class SceneStore implements ISceneStore {
     // Apply the Renderer to the DOM
     container?.appendChild(this.renderer.domElement);
 
-    this.addShape();
-
     // Set Camera position
-    this.camera.position.z = 5;
+    this.camera.position.z = 6;
 
     // Call animate to start rendering
     this.animate();
@@ -75,24 +106,6 @@ class SceneStore implements ISceneStore {
     // TODO: Add shape moving here.
 
     this.renderer.render(this.scene, this.camera);
-  }
-  line?: any;
-
-  // TODO: Move to the proper place.
-  private addShape(): void {
-    const geometry = new THREE.BufferGeometry();
-    // create a simple square shape. We duplicate the top left and bottom right
-    // vertices because each vertex needs to appear once per triangle.
-    const vertices = new Float32Array([
-      -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0,
-      1.0, -1.0, -1.0, 1.0,
-    ]);
-
-    // itemSize = 3 because there are 3 values (components) per vertex
-    geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-    const material = new THREE.MeshBasicMaterial({ color: '#d8d7d7' });
-    const mesh = new THREE.Mesh(geometry, material);
-    this.scene?.add(mesh);
   }
 
   private onResize(): void {

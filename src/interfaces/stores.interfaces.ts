@@ -1,4 +1,5 @@
 import { ITool } from './tool.interfaces';
+import { TShape } from '../types';
 
 export interface IUiStore {
   isLeftNavOpen: boolean;
@@ -16,6 +17,7 @@ export type IAddToolStore = IToolStore; // TODO: Extend later
 
 export interface ISceneStore {
   setCanvasRef(canvasRef?: HTMLCanvasElement): void;
+  addShape(shapeType: TShape): void;
 }
 
 export interface IRootStore {
