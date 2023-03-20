@@ -1,7 +1,9 @@
 import React from 'react';
 
+import Scene from '../components/Scene/Scene';
+
 const AppPage = (): JSX.Element => {
-  return <div>The content will be here</div>;
+  return <Scene />;
 };
 
 export default AppPage;

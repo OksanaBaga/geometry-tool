@@ -14,8 +14,13 @@ export interface IToolStore {
 export type IEditToolStore = IToolStore; // TODO: Extend later
 export type IAddToolStore = IToolStore; // TODO: Extend later
 
+export interface ISceneStore {
+  setCanvasRef(canvasRef?: HTMLCanvasElement): void;
+}
+
 export interface IRootStore {
   uiStore: IUiStore;
   editToolStore: IEditToolStore;
   addToolStore: IAddToolStore;
+  sceneStore: ISceneStore;
 }
