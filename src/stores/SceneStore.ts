@@ -6,20 +6,33 @@ import { EditToolTypes, TShape } from '../types';
 import SquareShape from './shapes/SquareShape';
 import TriangleShape from './shapes/TriangleShape';
 import HexagonShape from './shapes/HexagonShape';
+import { IShape } from '../interfaces/scene.interfaces';
+
+const DEFAULT_COLOR = '#eef4fc';
 
 class SceneStore implements ISceneStore {
-  private scene?: THREE.Scene;
+  // Scene props
   private camera?: THREE.PerspectiveCamera;
-  private renderer?: THREE.WebGLRenderer;
   private canvasRef?: HTMLCanvasElement;
+  private mouse?: THREE.Vector2;
+  private renderer?: THREE.WebGLRenderer;
+  private raycaster?: THREE.Raycaster;
+  private scene?: THREE.Scene;
+
+  // Shape props
+  private draggingOffset?: THREE.Vector3;
+  private isShapeDragging?: boolean;
+  private selectedShape?: IShape;
+  private shapes: IShape[];
 
   private rootStore: IRootStore;
 
   constructor(rootStore: IRootStore) {
     this.rootStore = rootStore;
+    this.shapes = [];
 
     if (typeof window !== 'undefined') {
-      window.addEventListener('resize', this.onResize.bind(this), false);
+      this.subscribeToBrowserEvents();
     }
 
     makeAutoObservable(this, {}, { autoBind: true });
@@ -34,37 +47,64 @@ class SceneStore implements ISceneStore {
     );
   }
 
+  /** Static Methods */
+
+  private static getShape(
+    shapeType: TShape,
+    color: string,
+    size: number
+  ): IShape | null {
+    switch (shapeType) {
+      case EditToolTypes.SQUARE:
+        return new SquareShape(color, size, size);
+      case EditToolTypes.TRIANGLE:
+        return new TriangleShape(color, size, size);
+      case EditToolTypes.HEXAGON:
+        return new HexagonShape(color, size, size);
+      default:
+        console.warn(`${shapeType} is not supported yet!`);
+        return null;
+    }
+  }
+
+  private static getIntersection(x: number, y: number): THREE.Vector3 {
+    return new THREE.Vector3(
+      (x / window.innerWidth) * 2 - 1,
+      -(y / window.innerHeight)
+    );
+  }
+
+  /** Public Methods */
+
   public addShape(shapeType: TShape): void {
     if (!this.scene) return;
 
-    const color = '#eef4fc';
+    const shape = SceneStore.getShape(shapeType, DEFAULT_COLOR, 1);
 
-    let mesh: THREE.Mesh;
+    if (!shape) return;
 
-    switch (shapeType) {
-      case EditToolTypes.SQUARE:
-        mesh = new SquareShape(color, 1, 1).mesh;
+    const mesh: THREE.Mesh = shape.mesh;
 
-        this.scene.add(mesh);
-        break;
-      case EditToolTypes.TRIANGLE:
-        mesh = new TriangleShape(color, 1, 1).mesh;
-
-        this.scene.add(mesh);
-        break;
-      case EditToolTypes.HEXAGON:
-        mesh = new HexagonShape(color, 1, 1).mesh;
-
-        this.scene.add(mesh);
-        break;
-      default:
-        console.warn(`${shapeType} is not supported yet!`);
-        break;
-    }
+    this.scene.add(mesh);
+    this.shapes.push(shape);
   }
 
   public setCanvasRef(canvasRef?: HTMLCanvasElement): void {
     this.canvasRef = canvasRef;
+  }
+
+  public dispose() {
+    this.unsubscribeFromMouseEvents();
+  }
+
+  /** Private Methods */
+
+  private animate(): void {
+    if (!this.scene || !this.renderer || !this.camera) return;
+
+    requestAnimationFrame(this.animate);
+
+    this.renderer.render(this.scene, this.camera);
   }
 
   private initScene(): void {
@@ -80,6 +120,12 @@ class SceneStore implements ISceneStore {
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
 
+    // Create a Raycaster
+    this.raycaster = new THREE.Raycaster();
+
+    // Create a vector representing the mouse position
+    this.mouse = new THREE.Vector2();
+
     // Create a Renderer
     this.renderer = new THREE.WebGLRenderer({
       antialias: true,
@@ -92,21 +138,111 @@ class SceneStore implements ISceneStore {
     container?.appendChild(this.renderer.domElement);
 
     // Set Camera position
-    this.camera.position.z = 6;
+    this.camera.position.z = 3;
 
     // Call animate to start rendering
     this.animate();
   }
 
-  private animate(): void {
-    if (!this.scene || !this.renderer || !this.camera) return;
+  private handleDrag(event: MouseEvent): void {
+    if (!this.selectedShape) {
+      return;
+    }
 
-    requestAnimationFrame(this.animate);
+    this.setIsShapeDragging(true);
+    this.draggingOffset = new THREE.Vector3();
 
-    // TODO: Add shape moving here.
+    const intersection = SceneStore.getIntersection(
+      event.clientX,
+      event.clientY
+    );
 
-    this.renderer.render(this.scene, this.camera);
+    if (intersection) {
+      this.draggingOffset
+        .copy(intersection)
+        .sub(this.selectedShape?.mesh.position);
+    }
   }
+
+  private handleSelect(): void {
+    if (!this.raycaster) return;
+
+    // Calculate the intersection between the ray and the cube
+    const intersects = this.raycaster.intersectObjects(
+      this.shapes.map((shape) => shape.mesh)
+    );
+
+    // If the ray intersects with the cube, log the cube object to the console
+    if (intersects.length > 0) {
+      const objectId = intersects[0].object.uuid;
+      const shape = this.shapes.find((shape) => shape.mesh.uuid === objectId);
+
+      if (shape) {
+        this.setSelectedShape(shape);
+      }
+    } else {
+      this.setSelectedShape(undefined);
+    }
+  }
+
+  private normalizeMouse(event: MouseEvent): void {
+    if (!this.mouse || !this.raycaster || !this.camera) return;
+
+    // Calculate the mouse position in normalized device coordinates
+    this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    // Update the Raycaster
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+  }
+
+  private setSelectedShape(shape?: IShape): void {
+    // Clear previous selected shape color
+    if (this.selectedShape) {
+      this.selectedShape.material.color = new THREE.Color(DEFAULT_COLOR);
+    }
+
+    if (shape) {
+      // Highlight the selected shape
+      shape.material.color = new THREE.Color('#8efc8f');
+    }
+
+    this.selectedShape = shape;
+  }
+
+  private setIsShapeDragging(isShapeDragging: boolean): void {
+    this.isShapeDragging = isShapeDragging;
+  }
+
+  private subscribeToBrowserEvents(): void {
+    if (!window || !document) return;
+
+    window.addEventListener('resize', this.onResize.bind(this), false);
+    document.addEventListener('mousemove', this.onMouseMove.bind(this), false);
+    document.addEventListener('mousedown', this.onMouseDown.bind(this), false);
+    document.addEventListener('mouseup', this.onMouseUp.bind(this), false);
+    document.addEventListener('keydown', this.onKeyDown.bind(this), false);
+  }
+
+  private unsubscribeFromMouseEvents(): void {
+    if (!window || !document) return;
+
+    window.removeEventListener('resize', this.onResize.bind(this), false);
+    document.removeEventListener(
+      'mousemove',
+      this.onMouseMove.bind(this),
+      false
+    );
+    document.removeEventListener(
+      'mousedown',
+      this.onMouseDown.bind(this),
+      false
+    );
+    document.removeEventListener('mouseup', this.onMouseUp.bind(this), false);
+    document.removeEventListener('keydown', this.onKeyDown.bind(this), false);
+  }
+
+  /** Mouse Events */
 
   private onResize(): void {
     if (!this.renderer || !this.camera || !this.canvasRef) return;
@@ -119,6 +255,87 @@ class SceneStore implements ISceneStore {
     this.camera.updateProjectionMatrix();
     // Change the Renderer size on screen resize
     this.renderer.setSize(width, height);
+  }
+
+  private onMouseMove(event: MouseEvent): void {
+    if (
+      !this.isShapeDragging ||
+      !this.selectedShape ||
+      !this.raycaster ||
+      !this.draggingOffset
+    ) {
+      return;
+    }
+
+    this.normalizeMouse(event);
+
+    const intersection = SceneStore.getIntersection(
+      event.clientX,
+      event.clientY
+    );
+    if (intersection) {
+      this.selectedShape.mesh.position.copy(
+        intersection.sub(this.draggingOffset)
+      );
+    }
+  }
+
+  private onKeyDown(event: KeyboardEvent): void {
+    if (
+      this.rootStore.editToolStore.selectedTool?.type !== EditToolTypes.MOVE ||
+      !this.selectedShape
+    ) {
+      return;
+    }
+
+    const delta = 0.1; // adjust the movement distance as needed
+
+    switch (event.code) {
+      case 'ArrowUp':
+        this.selectedShape.mesh.position.y += delta;
+        break;
+      case 'ArrowDown':
+        this.selectedShape.mesh.position.y -= delta;
+        break;
+      case 'ArrowLeft':
+        this.selectedShape.mesh.position.x -= delta;
+        break;
+      case 'ArrowRight':
+        this.selectedShape.mesh.position.x += delta;
+        break;
+      default:
+        break;
+    }
+  }
+
+  private onMouseDown(event: MouseEvent): void {
+    if (
+      event.target !== this.canvasRef || // The click originated outside the canvas
+      !this.rootStore.editToolStore.selectedTool ||
+      !this.mouse ||
+      !this.raycaster ||
+      !this.camera
+    ) {
+      return;
+    }
+
+    this.normalizeMouse(event);
+
+    switch (this.rootStore.editToolStore.selectedTool.type) {
+      case EditToolTypes.SELECT:
+        this.handleSelect();
+        break;
+      case EditToolTypes.MOVE:
+        this.handleDrag(event);
+        break;
+      default:
+        break;
+    }
+  }
+
+  private onMouseUp(): void {
+    this.setIsShapeDragging(false);
+    this.draggingOffset = undefined;
   }
 }
 
