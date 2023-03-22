@@ -4,10 +4,12 @@ export interface IShape {
   material: THREE.MeshBasicMaterial;
   shape: THREE.Mesh;
 
-  intersect(raycaster: THREE.Raycaster): THREE.Intersection<THREE.Object3D>[];
+  intersect(): THREE.Intersection<THREE.Object3D>[];
   onKeyDown(event: KeyboardEvent): void;
+  removeMarker(): void;
   setColor(color: string): void;
   setPosition(position: THREE.Vector3): void;
+  showClosestPoint(): void;
 }
 
 export interface IShapeProps {

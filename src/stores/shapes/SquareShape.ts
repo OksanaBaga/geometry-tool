@@ -4,8 +4,8 @@ import BaseShape from './BaseShape';
 import { IShapeProps } from '../../interfaces/scene.interfaces';
 
 class SquareShape extends BaseShape {
-  constructor(props: IShapeProps) {
-    super(props);
+  constructor(props: IShapeProps, protected raycaster: THREE.Raycaster) {
+    super(props, raycaster);
 
     const { color, width, height } = props;
 

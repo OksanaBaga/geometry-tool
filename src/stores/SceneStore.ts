@@ -22,7 +22,6 @@ class SceneStore implements ISceneStore {
 
   // Shape props
   private draggingOffset?: THREE.Vector3;
-  private intersectPoint: THREE.Vector3 = new THREE.Vector3();
   private isShapeDragging: boolean;
   private selectedShape?: IShape;
   private shapes: IShape[];
@@ -78,30 +77,6 @@ class SceneStore implements ISceneStore {
 
   /** Static Methods */
 
-  private static getShape(
-    shapeType: TShape,
-    color: string,
-    size: number
-  ): IShape | null {
-    const shapeProps: IShapeProps = {
-      color,
-      width: size,
-      height: size,
-    };
-
-    switch (shapeType) {
-      case EditToolTypes.SQUARE:
-        return new SquareShape(shapeProps);
-      case EditToolTypes.TRIANGLE:
-        return new TriangleShape(shapeProps);
-      case EditToolTypes.HEXAGON:
-        return new HexagonShape(shapeProps);
-      default:
-        console.warn(`${shapeType} is not supported yet!`);
-        return null;
-    }
-  }
-
   private static getIntersection(x: number, y: number): THREE.Vector3 {
     return new THREE.Vector3(
       (x / window.innerWidth) * 2 - 1,
@@ -112,7 +87,7 @@ class SceneStore implements ISceneStore {
   /** Public Methods */
 
   public addShape(shapeType: TShape): void {
-    const shape = SceneStore.getShape(shapeType, DEFAULT_COLOR, 1);
+    const shape = this.getShape(shapeType, DEFAULT_COLOR, 1);
 
     if (!shape) return;
 
@@ -146,57 +121,33 @@ class SceneStore implements ISceneStore {
     this.scene.add(this.marker);
   }
 
-  // TODO: Move it to the Shape
-  private handleClosestPoint(): void {
-    if (!this.selectedShape) {
-      return;
-    }
+  private getShape(
+    shapeType: TShape,
+    color: string,
+    size: number
+  ): IShape | null {
+    const shapeProps: IShapeProps = {
+      color,
+      width: size,
+      height: size,
+    };
 
-    if (!this.marker) {
-      this.addMarker();
-    }
-
-    // Find the intersection point of the ray with the shape
-    const intersects = this.selectedShape.intersect(this.raycaster);
-    if (intersects.length > 0) {
-      // If the mouse is inside the shape, move the marker near the mouse
-      this.intersectPoint.copy(intersects[0].point);
-      this.marker?.position.copy(this.intersectPoint);
-    } else {
-      // get the closest point on the geometry to the intersection point
-      const positions = (
-        this.selectedShape.shape.geometry.getAttribute(
-          'position'
-        ) as THREE.BufferAttribute
-      ).array;
-      const position = new THREE.Vector3();
-      let closestDistance = Infinity;
-      let closestIndex = -1;
-
-      for (let i = 0; i < positions.length; i += 3) {
-        position.set(positions[i], positions[i + 1], positions[i + 2]);
-        const distance = this.intersectPoint.distanceTo(position);
-
-        if (distance < closestDistance) {
-          closestDistance = distance;
-          closestIndex = i;
-        }
-      }
-
-      const closestPoint = new THREE.Vector3(
-        positions[closestIndex],
-        positions[closestIndex + 1],
-        positions[closestIndex + 2]
-      );
-
-      // update the position of your marker object
-      this.marker?.position.copy(closestPoint);
+    switch (shapeType) {
+      case EditToolTypes.SQUARE:
+        return new SquareShape(shapeProps, this.raycaster);
+      case EditToolTypes.TRIANGLE:
+        return new TriangleShape(shapeProps, this.raycaster);
+      case EditToolTypes.HEXAGON:
+        return new HexagonShape(shapeProps, this.raycaster);
+      default:
+        console.warn(`${shapeType} is not supported yet!`);
+        return null;
     }
   }
 
   private getShapesIntersects(): THREE.Intersection<THREE.Object3D>[] {
     return this.shapes.reduce((curr, item) => {
-      curr.push(...item.intersect(this.raycaster));
+      curr.push(...item.intersect());
 
       return curr;
     }, [] as THREE.Intersection<THREE.Object3D>[]);
@@ -313,6 +264,12 @@ class SceneStore implements ISceneStore {
     this.renderer.setSize(width, height);
   }
 
+  private clearMarkers(): void {
+    this.shapes.forEach((shape) => {
+      shape.removeMarker();
+    });
+  }
+
   private onMouseMove(event: MouseEvent): void {
     if (!this.rootStore.editToolStore.selectedTool) {
       return;
@@ -322,6 +279,8 @@ class SceneStore implements ISceneStore {
 
     switch (this.rootStore.editToolStore.selectedTool.type) {
       case EditToolTypes.MOVE:
+        this.clearMarkers();
+
         const intersection = SceneStore.getIntersection(
           event.clientX,
           event.clientY
@@ -331,9 +290,12 @@ class SceneStore implements ISceneStore {
         }
         break;
       case EditToolTypes.CLOSEST_POINT:
-        this.handleClosestPoint();
+        this.shapes.forEach((shape: IShape) => {
+          shape.showClosestPoint();
+        });
         break;
       default:
+        this.clearMarkers();
         break;
     }
   }
