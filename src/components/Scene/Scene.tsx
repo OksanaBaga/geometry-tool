@@ -4,14 +4,14 @@ import { useRootStore } from '../../context/AppStateContext';
 import { SceneContainer } from './Scene.styles';
 
 const Scene = (): JSX.Element => {
-  const { sceneStore } = useRootStore();
+  const { setCanvasRef } = useRootStore();
 
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     if (canvasRef.current) {
       // Set canvas ref to initialize the Scene when it exists
-      sceneStore.setCanvasRef(canvasRef.current);
+      setCanvasRef(canvasRef.current);
     }
   }, []);
 

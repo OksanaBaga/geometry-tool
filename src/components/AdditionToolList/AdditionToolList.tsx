@@ -19,7 +19,7 @@ const AdditionToolList = (): JSX.Element => {
           key={tool.title}
           open={uiStore.isLeftNavOpen}
           iconElement={getToolIcon(tool.type)}
-          handler={() => sceneStore.addShape(tool.type as TShape)}
+          handler={() => sceneStore?.addShape(tool.type as TShape)}
           {...tool}
         />
       ))}

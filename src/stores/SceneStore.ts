@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { makeAutoObservable, when } from 'mobx';
+import { makeAutoObservable } from 'mobx';
 
 import { IRootStore, ISceneStore } from '../interfaces/stores.interfaces';
 import { EditToolTypes, TShape } from '../types';
@@ -12,18 +12,18 @@ const DEFAULT_COLOR = '#eef4fc';
 
 class SceneStore implements ISceneStore {
   // Scene props
-  private camera?: THREE.PerspectiveCamera;
-  private canvasRef?: HTMLCanvasElement;
-  private mouse?: THREE.Vector2;
-  private renderer?: THREE.WebGLRenderer;
-  private raycaster?: THREE.Raycaster;
-  private scene?: THREE.Scene;
+  readonly camera: THREE.PerspectiveCamera;
+  readonly mouse: THREE.Vector2;
+  readonly scene: THREE.Scene;
+
+  private renderer: THREE.WebGLRenderer;
+  private raycaster: THREE.Raycaster;
   private marker?: THREE.Mesh;
 
   // Shape props
   private draggingOffset?: THREE.Vector3;
   private intersectPoint: THREE.Vector3 = new THREE.Vector3();
-  private isShapeDragging?: boolean;
+  private isShapeDragging: boolean;
   private selectedShape?: IShape;
   private shapes: IShape[];
 
@@ -32,21 +32,50 @@ class SceneStore implements ISceneStore {
   constructor(rootStore: IRootStore) {
     this.rootStore = rootStore;
     this.shapes = [];
+    this.isShapeDragging = false;
+
+    const container = document.getElementById('canvas-renderer');
+    const width =
+      container?.offsetWidth ||
+      this.rootStore.canvasRef?.width ||
+      window.innerWidth;
+    const height =
+      container?.offsetHeight ||
+      this.rootStore.canvasRef?.height ||
+      window.innerHeight;
+
+    // Create a Scene and Camera
+    this.scene = new THREE.Scene();
+    this.camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+
+    // Create a Raycaster
+    this.raycaster = new THREE.Raycaster();
+
+    // Create a vector representing the mouse position
+    this.mouse = new THREE.Vector2();
+
+    // Create a Renderer
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      canvas: this.rootStore.canvasRef,
+    });
+
+    // Set renderer side depends on the container size
+    this.renderer.setSize(width, height);
+    // Apply the Renderer to the DOM
+    container?.appendChild(this.renderer.domElement);
+
+    // Set Camera position
+    this.camera.position.z = 3;
+
+    // Call animate to start rendering
+    this.animate();
 
     if (typeof window !== 'undefined') {
       this.subscribeToBrowserEvents();
     }
 
     makeAutoObservable(this, {}, { autoBind: true });
-
-    when(
-      () => Boolean(this.canvasRef),
-      () => {
-        if (!this.scene) {
-          this.initScene();
-        }
-      }
-    );
   }
 
   /** Static Methods */
@@ -79,8 +108,6 @@ class SceneStore implements ISceneStore {
   /** Public Methods */
 
   public addShape(shapeType: TShape): void {
-    if (!this.scene) return;
-
     const shape = SceneStore.getShape(shapeType, DEFAULT_COLOR, 1);
 
     if (!shape) return;
@@ -91,64 +118,19 @@ class SceneStore implements ISceneStore {
     this.shapes.push(shape);
   }
 
-  public setCanvasRef(canvasRef?: HTMLCanvasElement): void {
-    this.canvasRef = canvasRef;
-  }
-
   public dispose() {
     this.unsubscribeFromMouseEvents();
   }
 
   /** Private Methods */
 
-  private animate(): void {
-    if (!this.scene || !this.renderer || !this.camera) return;
-
+  private animate = (): void => {
     requestAnimationFrame(this.animate);
 
     this.renderer.render(this.scene, this.camera);
-  }
-
-  private initScene(): void {
-    if (!this.canvasRef) {
-      throw new Error('Init without canvas');
-    }
-
-    const container = document.getElementById('canvas-renderer');
-    const width = container?.offsetWidth || this.canvasRef.width;
-    const height = container?.offsetHeight || this.canvasRef.height;
-
-    // Create a Scene and Camera
-    this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-
-    // Create a Raycaster
-    this.raycaster = new THREE.Raycaster();
-
-    // Create a vector representing the mouse position
-    this.mouse = new THREE.Vector2();
-
-    // Create a Renderer
-    this.renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      canvas: this.canvasRef,
-    });
-
-    // Set renderer side depends on the container size
-    this.renderer.setSize(width, height);
-    // Apply the Renderer to the DOM
-    container?.appendChild(this.renderer.domElement);
-
-    // Set Camera position
-    this.camera.position.z = 3;
-
-    // Call animate to start rendering
-    this.animate();
-  }
+  };
 
   private addMarker(): void {
-    if (!this.scene) return;
-
     const markerGeometry = new THREE.SphereGeometry(0.02, 16, 16);
     const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
 
@@ -157,7 +139,7 @@ class SceneStore implements ISceneStore {
   }
 
   private handleClosestPoint(): void {
-    if (!this.raycaster || !this.selectedShape) {
+    if (!this.selectedShape) {
       return;
     }
 
@@ -224,8 +206,6 @@ class SceneStore implements ISceneStore {
   }
 
   private handleSelect(): void {
-    if (!this.raycaster) return;
-
     // Calculate the intersection between the ray and the cube
     const intersects = this.raycaster.intersectObjects(
       this.shapes.map((shape) => shape.mesh)
@@ -245,8 +225,6 @@ class SceneStore implements ISceneStore {
   }
 
   private normalizeMouse(event: MouseEvent): void {
-    if (!this.mouse || !this.raycaster || !this.camera) return;
-
     // Calculate the mouse position in normalized device coordinates
     this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -304,11 +282,15 @@ class SceneStore implements ISceneStore {
   /** Mouse Events */
 
   private onResize(): void {
-    if (!this.renderer || !this.camera || !this.canvasRef) return;
-
     const container = document.getElementById('canvas-renderer');
-    const width = container?.offsetWidth || this.canvasRef.width;
-    const height = container?.offsetHeight || this.canvasRef.height;
+    const width =
+      container?.offsetWidth ||
+      this.rootStore.canvasRef?.width ||
+      window.innerWidth;
+    const height =
+      container?.offsetHeight ||
+      this.rootStore.canvasRef?.height ||
+      window.innerHeight;
 
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
@@ -317,7 +299,7 @@ class SceneStore implements ISceneStore {
   }
 
   private onMouseMove(event: MouseEvent): void {
-    if (!this.rootStore.editToolStore.selectedTool || !this.raycaster) {
+    if (!this.rootStore.editToolStore.selectedTool) {
       return;
     }
 
@@ -373,11 +355,8 @@ class SceneStore implements ISceneStore {
 
   private onMouseDown(event: MouseEvent): void {
     if (
-      event.target !== this.canvasRef || // The click originated outside the canvas
-      !this.rootStore.editToolStore.selectedTool ||
-      !this.mouse ||
-      !this.raycaster ||
-      !this.camera
+      event.target !== this.rootStore.canvasRef || // The click originated outside the canvas
+      !this.rootStore.editToolStore.selectedTool
     ) {
       return;
     }

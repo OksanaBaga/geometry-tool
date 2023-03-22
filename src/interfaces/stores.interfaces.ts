@@ -16,13 +16,15 @@ export type IEditToolStore = IToolStore; // TODO: Extend later
 export type IAddToolStore = IToolStore; // TODO: Extend later
 
 export interface ISceneStore {
-  setCanvasRef(canvasRef?: HTMLCanvasElement): void;
   addShape(shapeType: TShape): void;
 }
 
 export interface IRootStore {
-  uiStore: IUiStore;
-  editToolStore: IEditToolStore;
   addToolStore: IAddToolStore;
-  sceneStore: ISceneStore;
+  canvasRef?: HTMLCanvasElement;
+  editToolStore: IEditToolStore;
+  sceneStore?: ISceneStore;
+  uiStore: IUiStore;
+
+  setCanvasRef(canvasRef?: HTMLCanvasElement): void;
 }

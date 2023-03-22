@@ -1,4 +1,4 @@
-import { makeAutoObservable } from 'mobx';
+import { makeAutoObservable, when } from 'mobx';
 
 import UiStore from './UiStore';
 import {
@@ -15,13 +15,14 @@ import SceneStore from './SceneStore';
 class RootStore implements IRootStore {
   public addToolStore: IAddToolStore;
   public editToolStore: IEditToolStore;
-  public sceneStore: ISceneStore;
+  public sceneStore?: ISceneStore;
   public uiStore: IUiStore;
+
+  public canvasRef?: HTMLCanvasElement;
 
   constructor() {
     this.addToolStore = new AddToolStore(this);
     this.editToolStore = new EditToolStore(this);
-    this.sceneStore = new SceneStore(this);
     this.uiStore = new UiStore(this);
 
     if (typeof window !== 'undefined') {
@@ -30,7 +31,20 @@ class RootStore implements IRootStore {
     }
 
     makeAutoObservable(this);
+
+    when(
+      () => Boolean(this.canvasRef),
+      () => {
+        if (!this.sceneStore) {
+          this.sceneStore = new SceneStore(this);
+        }
+      }
+    );
   }
+
+  public setCanvasRef = (canvasRef?: HTMLCanvasElement): void => {
+    this.canvasRef = canvasRef;
+  };
 }
 
 export default RootStore;
