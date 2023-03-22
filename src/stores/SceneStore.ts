@@ -18,9 +18,11 @@ class SceneStore implements ISceneStore {
   private renderer?: THREE.WebGLRenderer;
   private raycaster?: THREE.Raycaster;
   private scene?: THREE.Scene;
+  private marker?: THREE.Mesh;
 
   // Shape props
   private draggingOffset?: THREE.Vector3;
+  private intersectPoint: THREE.Vector3 = new THREE.Vector3();
   private isShapeDragging?: boolean;
   private selectedShape?: IShape;
   private shapes: IShape[];
@@ -144,6 +146,63 @@ class SceneStore implements ISceneStore {
     this.animate();
   }
 
+  private addMarker(): void {
+    if (!this.scene) return;
+
+    const markerGeometry = new THREE.SphereGeometry(0.02, 16, 16);
+    const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+
+    this.marker = new THREE.Mesh(markerGeometry, markerMaterial);
+    this.scene.add(this.marker);
+  }
+
+  private handleClosestPoint(): void {
+    if (!this.raycaster || !this.selectedShape) {
+      return;
+    }
+
+    if (!this.marker) {
+      this.addMarker();
+    }
+
+    // Find the intersection point of the ray with the shape
+    const intersects = this.raycaster.intersectObject(this.selectedShape.mesh);
+    if (intersects.length > 0) {
+      // If the mouse is inside the shape, move the marker near the mouse
+      this.intersectPoint.copy(intersects[0].point);
+      this.marker?.position.copy(this.intersectPoint);
+    } else {
+      // get the closest point on the geometry to the intersection point
+      const positions = (
+        this.selectedShape.geometry.getAttribute(
+          'position'
+        ) as THREE.BufferAttribute
+      ).array;
+      const position = new THREE.Vector3();
+      let closestDistance = Infinity;
+      let closestIndex = -1;
+
+      for (let i = 0; i < positions.length; i += 3) {
+        position.set(positions[i], positions[i + 1], positions[i + 2]);
+        const distance = this.intersectPoint.distanceTo(position);
+
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestIndex = i;
+        }
+      }
+
+      const closestPoint = new THREE.Vector3(
+        positions[closestIndex],
+        positions[closestIndex + 1],
+        positions[closestIndex + 2]
+      );
+
+      // update the position of your marker object
+      this.marker?.position.copy(closestPoint);
+    }
+  }
+
   private handleDrag(event: MouseEvent): void {
     if (!this.selectedShape) {
       return;
@@ -258,25 +317,29 @@ class SceneStore implements ISceneStore {
   }
 
   private onMouseMove(event: MouseEvent): void {
-    if (
-      !this.isShapeDragging ||
-      !this.selectedShape ||
-      !this.raycaster ||
-      !this.draggingOffset
-    ) {
+    if (!this.rootStore.editToolStore.selectedTool || !this.raycaster) {
       return;
     }
 
     this.normalizeMouse(event);
 
-    const intersection = SceneStore.getIntersection(
-      event.clientX,
-      event.clientY
-    );
-    if (intersection) {
-      this.selectedShape.mesh.position.copy(
-        intersection.sub(this.draggingOffset)
-      );
+    switch (this.rootStore.editToolStore.selectedTool.type) {
+      case EditToolTypes.MOVE:
+        const intersection = SceneStore.getIntersection(
+          event.clientX,
+          event.clientY
+        );
+        if (intersection && this.selectedShape && this.draggingOffset) {
+          this.selectedShape.mesh.position.copy(
+            intersection.sub(this.draggingOffset)
+          );
+        }
+        break;
+      case EditToolTypes.CLOSEST_POINT:
+        this.handleClosestPoint();
+        break;
+      default:
+        break;
     }
   }
 
