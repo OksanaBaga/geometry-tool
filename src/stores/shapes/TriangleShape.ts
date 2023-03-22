@@ -1,33 +1,32 @@
 import * as THREE from 'three';
 
-import { IShape } from '../../interfaces/scene.interfaces';
+import BaseShape from './BaseShape';
+import { IShapeProps } from '../../interfaces/scene.interfaces';
 
-class TriangleShape implements IShape {
-  readonly shape: THREE.Shape;
-  readonly geometry: THREE.ShapeGeometry;
-  readonly material: THREE.MeshBasicMaterial;
+class TriangleShape extends BaseShape {
+  constructor(props: IShapeProps) {
+    super(props);
 
-  public mesh: THREE.Mesh;
+    const { color, width, height } = props;
 
-  constructor(color: string, width: number, height: number) {
-    this.shape = new THREE.Shape();
+    const shape = new THREE.Shape();
 
     // Define the triangle's geometry
-    this.shape.moveTo(0, 0);
-    this.shape.lineTo(width, 0);
-    this.shape.lineTo(width / 2, height);
-    this.shape.lineTo(0, 0);
+    shape.moveTo(0, 0);
+    shape.lineTo(width, 0);
+    shape.lineTo(width / 2, height);
+    shape.lineTo(0, 0);
 
-    this.geometry = new THREE.ShapeGeometry(this.shape);
+    const geometry = new THREE.ShapeGeometry(shape);
 
     // Scale the geometry to the desired width and height
-    this.geometry.scale(width / height, 1, 1);
+    geometry.scale(width / height, 1, 1);
 
     // Center the geometry within the bounding box
-    this.geometry.translate(-width / 2 - 1, -height / 2 + 1, 0);
+    geometry.translate(-width / 2 - 1, -height / 2 + 1, 0);
 
     this.material = new THREE.MeshBasicMaterial({ color });
-    this.mesh = new THREE.Mesh(this.geometry, this.material);
+    this.shape = new THREE.Mesh(geometry, this.material);
   }
 }
 

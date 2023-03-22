@@ -6,7 +6,7 @@ import { EditToolTypes, TShape } from '../types';
 import SquareShape from './shapes/SquareShape';
 import TriangleShape from './shapes/TriangleShape';
 import HexagonShape from './shapes/HexagonShape';
-import { IShape } from '../interfaces/scene.interfaces';
+import { IShape, IShapeProps } from '../interfaces/scene.interfaces';
 
 const DEFAULT_COLOR = '#eef4fc';
 
@@ -70,10 +70,8 @@ class SceneStore implements ISceneStore {
 
     // Call animate to start rendering
     this.animate();
-
-    if (typeof window !== 'undefined') {
-      this.subscribeToBrowserEvents();
-    }
+    // Subscribe to the browser events to handle mouse and resize.
+    this.subscribeToBrowserEvents();
 
     makeAutoObservable(this, {}, { autoBind: true });
   }
@@ -85,13 +83,19 @@ class SceneStore implements ISceneStore {
     color: string,
     size: number
   ): IShape | null {
+    const shapeProps: IShapeProps = {
+      color,
+      width: size,
+      height: size,
+    };
+
     switch (shapeType) {
       case EditToolTypes.SQUARE:
-        return new SquareShape(color, size, size);
+        return new SquareShape(shapeProps);
       case EditToolTypes.TRIANGLE:
-        return new TriangleShape(color, size, size);
+        return new TriangleShape(shapeProps);
       case EditToolTypes.HEXAGON:
-        return new HexagonShape(color, size, size);
+        return new HexagonShape(shapeProps);
       default:
         console.warn(`${shapeType} is not supported yet!`);
         return null;
@@ -112,10 +116,14 @@ class SceneStore implements ISceneStore {
 
     if (!shape) return;
 
-    const mesh: THREE.Mesh = shape.mesh;
+    const mesh: THREE.Mesh = shape.shape;
 
     this.scene.add(mesh);
     this.shapes.push(shape);
+  }
+
+  public getShapeById(id: string): IShape | undefined {
+    return this.shapes.find((item: IShape) => item.shape.uuid === id);
   }
 
   public dispose() {
@@ -138,6 +146,7 @@ class SceneStore implements ISceneStore {
     this.scene.add(this.marker);
   }
 
+  // TODO: Move it to the Shape
   private handleClosestPoint(): void {
     if (!this.selectedShape) {
       return;
@@ -148,7 +157,7 @@ class SceneStore implements ISceneStore {
     }
 
     // Find the intersection point of the ray with the shape
-    const intersects = this.raycaster.intersectObject(this.selectedShape.mesh);
+    const intersects = this.selectedShape.intersect(this.raycaster);
     if (intersects.length > 0) {
       // If the mouse is inside the shape, move the marker near the mouse
       this.intersectPoint.copy(intersects[0].point);
@@ -156,7 +165,7 @@ class SceneStore implements ISceneStore {
     } else {
       // get the closest point on the geometry to the intersection point
       const positions = (
-        this.selectedShape.geometry.getAttribute(
+        this.selectedShape.shape.geometry.getAttribute(
           'position'
         ) as THREE.BufferAttribute
       ).array;
@@ -185,6 +194,14 @@ class SceneStore implements ISceneStore {
     }
   }
 
+  private getShapesIntersects(): THREE.Intersection<THREE.Object3D>[] {
+    return this.shapes.reduce((curr, item) => {
+      curr.push(...item.intersect(this.raycaster));
+
+      return curr;
+    }, [] as THREE.Intersection<THREE.Object3D>[]);
+  }
+
   private handleDrag(event: MouseEvent): void {
     if (!this.selectedShape) {
       return;
@@ -201,20 +218,18 @@ class SceneStore implements ISceneStore {
     if (intersection) {
       this.draggingOffset
         .copy(intersection)
-        .sub(this.selectedShape?.mesh.position);
+        .sub(this.selectedShape?.shape.position);
     }
   }
 
   private handleSelect(): void {
-    // Calculate the intersection between the ray and the cube
-    const intersects = this.raycaster.intersectObjects(
-      this.shapes.map((shape) => shape.mesh)
-    );
+    // Calculate the intersection between the ray and the shape
+    const intersects = this.getShapesIntersects();
 
-    // If the ray intersects with the cube, log the cube object to the console
+    // If the ray intersects with the shape, log the shape object to the console
     if (intersects.length > 0) {
       const objectId = intersects[0].object.uuid;
-      const shape = this.shapes.find((shape) => shape.mesh.uuid === objectId);
+      const shape = this.getShapeById(objectId);
 
       if (shape) {
         this.setSelectedShape(shape);
@@ -236,12 +251,12 @@ class SceneStore implements ISceneStore {
   private setSelectedShape(shape?: IShape): void {
     // Clear previous selected shape color
     if (this.selectedShape) {
-      this.selectedShape.material.color = new THREE.Color(DEFAULT_COLOR);
+      this.selectedShape.setColor(DEFAULT_COLOR);
     }
 
     if (shape) {
       // Highlight the selected shape
-      shape.material.color = new THREE.Color('#8efc8f');
+      shape.setColor('#8efc8f');
     }
 
     this.selectedShape = shape;
@@ -312,9 +327,7 @@ class SceneStore implements ISceneStore {
           event.clientY
         );
         if (intersection && this.selectedShape && this.draggingOffset) {
-          this.selectedShape.mesh.position.copy(
-            intersection.sub(this.draggingOffset)
-          );
+          this.selectedShape.setPosition(intersection.sub(this.draggingOffset));
         }
         break;
       case EditToolTypes.CLOSEST_POINT:
@@ -327,30 +340,12 @@ class SceneStore implements ISceneStore {
 
   private onKeyDown(event: KeyboardEvent): void {
     if (
-      this.rootStore.editToolStore.selectedTool?.type !== EditToolTypes.MOVE ||
-      !this.selectedShape
+      this.rootStore.editToolStore.selectedTool?.type !== EditToolTypes.MOVE
     ) {
       return;
     }
 
-    const delta = 0.1; // adjust the movement distance as needed
-
-    switch (event.code) {
-      case 'ArrowUp':
-        this.selectedShape.mesh.position.y += delta;
-        break;
-      case 'ArrowDown':
-        this.selectedShape.mesh.position.y -= delta;
-        break;
-      case 'ArrowLeft':
-        this.selectedShape.mesh.position.x -= delta;
-        break;
-      case 'ArrowRight':
-        this.selectedShape.mesh.position.x += delta;
-        break;
-      default:
-        break;
-    }
+    this.selectedShape?.onKeyDown(event);
   }
 
   private onMouseDown(event: MouseEvent): void {

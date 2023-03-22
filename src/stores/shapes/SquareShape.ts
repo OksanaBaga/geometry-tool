@@ -1,30 +1,30 @@
 import * as THREE from 'three';
 
-import { IShape } from '../../interfaces/scene.interfaces';
+import BaseShape from './BaseShape';
+import { IShapeProps } from '../../interfaces/scene.interfaces';
 
-class SquareShape implements IShape {
-  readonly shape: THREE.Shape;
-  readonly geometry: THREE.ShapeGeometry;
-  readonly material: THREE.MeshBasicMaterial;
+class SquareShape extends BaseShape {
+  constructor(props: IShapeProps) {
+    super(props);
 
-  public mesh: THREE.Mesh;
+    const { color, width, height } = props;
 
-  constructor(color: string, width: number, height: number) {
-    this.shape = new THREE.Shape();
+    const shape = new THREE.Shape();
 
     // Define the square's geometry
-    this.shape.moveTo(0, 0);
-    this.shape.lineTo(width, 0);
-    this.shape.lineTo(width, height);
-    this.shape.lineTo(0, height);
-    this.shape.lineTo(0, 0);
+    shape.moveTo(0, 0);
+    shape.lineTo(width, 0);
+    shape.lineTo(width, height);
+    shape.lineTo(0, height);
+    shape.lineTo(0, 0);
 
     // Set the autoClose property to ensure that the shape is closed when rendered
-    this.shape.autoClose = true;
+    shape.autoClose = true;
 
-    this.geometry = new THREE.ShapeGeometry(this.shape);
+    const geometry = new THREE.ShapeGeometry(shape);
+
     this.material = new THREE.MeshBasicMaterial({ color });
-    this.mesh = new THREE.Mesh(this.geometry, this.material);
+    this.shape = new THREE.Mesh(geometry, this.material);
   }
 }
 

@@ -1,5 +1,6 @@
 import { ITool } from './tool.interfaces';
 import { TShape } from '../types';
+import { IShape } from './scene.interfaces';
 
 export interface IUiStore {
   isLeftNavOpen: boolean;
@@ -17,6 +18,7 @@ export type IAddToolStore = IToolStore; // TODO: Extend later
 
 export interface ISceneStore {
   addShape(shapeType: TShape): void;
+  getShapeById(id: string): IShape | undefined;
 }
 
 export interface IRootStore {
