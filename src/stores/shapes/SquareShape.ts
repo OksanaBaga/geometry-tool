@@ -25,6 +25,7 @@ class SquareShape extends BaseShape {
 
     this.material = new THREE.MeshBasicMaterial({ color });
     this.shape = new THREE.Mesh(geometry, this.material);
+    this.shape.position.set(-100, 100, 0);
   }
 }
 
