@@ -9,7 +9,7 @@ export interface IShape {
   removeMarker(): void;
   setColor(color: string): void;
   setPosition(position: THREE.Vector3): void;
-  showClosestPoint(): void;
+  showClosestPoint(mouse: THREE.Vector2): void;
 }
 
 export interface IShapeProps {

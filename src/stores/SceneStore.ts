@@ -12,7 +12,7 @@ const DEFAULT_COLOR = '#eef4fc';
 
 class SceneStore implements ISceneStore {
   // Scene props
-  readonly camera: THREE.PerspectiveCamera;
+  readonly camera: THREE.OrthographicCamera;
   readonly mouse: THREE.Vector2;
   readonly scene: THREE.Scene;
 
@@ -26,6 +26,8 @@ class SceneStore implements ISceneStore {
   private selectedShape?: IShape;
   private shapes: IShape[];
 
+  private aspect: number;
+
   private rootStore: IRootStore;
 
   constructor(rootStore: IRootStore) {
@@ -34,18 +36,23 @@ class SceneStore implements ISceneStore {
     this.isShapeDragging = false;
 
     const container = document.getElementById('canvas-renderer');
-    const width =
-      container?.offsetWidth ||
-      this.rootStore.canvasRef?.width ||
-      window.innerWidth;
-    const height =
-      container?.offsetHeight ||
-      this.rootStore.canvasRef?.height ||
-      window.innerHeight;
 
     // Create a Scene and Camera
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+
+    // Create an orthographic camera with a visible range of 1 to 1000
+    this.aspect = window.innerWidth / window.innerHeight;
+    this.camera = new THREE.OrthographicCamera(
+      -1 * this.aspect, // left
+      this.aspect, // right
+      1, // top
+      -1, // bottom
+      0.1, // near
+      10 // far
+    );
+
+    // Set the camera position
+    this.camera.position.set(0, 0, 1);
 
     // Create a Raycaster
     this.raycaster = new THREE.Raycaster();
@@ -59,13 +66,11 @@ class SceneStore implements ISceneStore {
       canvas: this.rootStore.canvasRef,
     });
 
+    this.renderer.setPixelRatio(window.devicePixelRatio);
     // Set renderer side depends on the container size
-    this.renderer.setSize(width, height);
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
     // Apply the Renderer to the DOM
     container?.appendChild(this.renderer.domElement);
-
-    // Set Camera position
-    this.camera.position.z = 3;
 
     // Call animate to start rendering
     this.animate();
@@ -87,7 +92,7 @@ class SceneStore implements ISceneStore {
   /** Public Methods */
 
   public addShape(shapeType: TShape): void {
-    const shape = this.getShape(shapeType, DEFAULT_COLOR, 1);
+    const shape = this.getShape(shapeType, DEFAULT_COLOR, 0.5);
 
     if (!shape) return;
 
@@ -114,11 +119,26 @@ class SceneStore implements ISceneStore {
   };
 
   private addMarker(): void {
-    const markerGeometry = new THREE.SphereGeometry(0.02, 16, 16);
+    // Marker that follows mouse
+    const markerGeometry = new THREE.SphereGeometry(0.01, 16, 16);
     const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
 
     this.marker = new THREE.Mesh(markerGeometry, markerMaterial);
     this.scene.add(this.marker);
+  }
+
+  private setMarkerPosition(x: number, y: number): void {
+    if (
+      this.rootStore.editToolStore.selectedTool?.type !==
+      EditToolTypes.CLOSEST_POINT
+    )
+      return;
+
+    if (!this.marker) {
+      this.addMarker();
+    }
+
+    this.marker?.position.set(x, y, 0);
   }
 
   private getShape(
@@ -192,11 +212,19 @@ class SceneStore implements ISceneStore {
 
   private normalizeMouse(event: MouseEvent): void {
     // Calculate the mouse position in normalized device coordinates
-    this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    const mouseX = x * this.aspect;
+    const mouseY = y;
 
-    // Update the Raycaster
+    this.mouse.set(x, y);
+
+    // Set the ray's origin and direction based on the mouse position and camera orientation
     this.raycaster.setFromCamera(this.mouse, this.camera);
+
+    // Update the position of the points object to the leftmost top point of the cursor
+    this.setMarkerPosition(mouseX, mouseY);
   }
 
   private setSelectedShape(shape?: IShape): void {
@@ -221,44 +249,59 @@ class SceneStore implements ISceneStore {
     if (!window || !document) return;
 
     window.addEventListener('resize', this.onResize.bind(this), false);
-    document.addEventListener('mousemove', this.onMouseMove.bind(this), false);
-    document.addEventListener('mousedown', this.onMouseDown.bind(this), false);
-    document.addEventListener('mouseup', this.onMouseUp.bind(this), false);
-    document.addEventListener('keydown', this.onKeyDown.bind(this), false);
+    document.body.addEventListener(
+      'mousemove',
+      this.onMouseMove.bind(this),
+      false
+    );
+    document.body.addEventListener(
+      'mousedown',
+      this.onMouseDown.bind(this),
+      false
+    );
+    document.body.addEventListener('mouseup', this.onMouseUp.bind(this), false);
+    document.body.addEventListener('keydown', this.onKeyDown.bind(this), false);
   }
 
   private unsubscribeFromMouseEvents(): void {
     if (!window || !document) return;
 
     window.removeEventListener('resize', this.onResize.bind(this), false);
-    document.removeEventListener(
+    document.body.removeEventListener(
       'mousemove',
       this.onMouseMove.bind(this),
       false
     );
-    document.removeEventListener(
+    document.body.removeEventListener(
       'mousedown',
       this.onMouseDown.bind(this),
       false
     );
-    document.removeEventListener('mouseup', this.onMouseUp.bind(this), false);
-    document.removeEventListener('keydown', this.onKeyDown.bind(this), false);
+    document.body.removeEventListener(
+      'mouseup',
+      this.onMouseUp.bind(this),
+      false
+    );
+    document.body.removeEventListener(
+      'keydown',
+      this.onKeyDown.bind(this),
+      false
+    );
   }
 
   /** Mouse Events */
 
   private onResize(): void {
-    const container = document.getElementById('canvas-renderer');
-    const width =
-      container?.offsetWidth ||
-      this.rootStore.canvasRef?.width ||
-      window.innerWidth;
-    const height =
-      container?.offsetHeight ||
-      this.rootStore.canvasRef?.height ||
-      window.innerHeight;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
 
-    this.camera.aspect = width / height;
+    // Update camera position on screen resize
+    this.aspect = width / height;
+    this.camera.left = -1 * this.aspect;
+    this.camera.right = this.aspect;
+    this.camera.top = 1;
+    this.camera.bottom = -1;
+
     this.camera.updateProjectionMatrix();
     // Change the Renderer size on screen resize
     this.renderer.setSize(width, height);
@@ -268,6 +311,11 @@ class SceneStore implements ISceneStore {
     this.shapes.forEach((shape) => {
       shape.removeMarker();
     });
+
+    // Clear mouse markers
+    this.marker && this.scene.remove(this.marker);
+
+    this.marker = undefined;
   }
 
   private onMouseMove(event: MouseEvent): void {
@@ -291,7 +339,7 @@ class SceneStore implements ISceneStore {
         break;
       case EditToolTypes.CLOSEST_POINT:
         this.shapes.forEach((shape: IShape) => {
-          shape.showClosestPoint();
+          shape.showClosestPoint(this.mouse);
         });
         break;
       default:
