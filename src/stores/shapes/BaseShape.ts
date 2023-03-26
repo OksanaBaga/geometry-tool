@@ -134,7 +134,7 @@ class BaseShape implements IShape {
   }
 
   private addMarker(): void {
-    const markerGeometry = new THREE.SphereGeometry(5, 16, 16);
+    const markerGeometry = new THREE.SphereGeometry(0.01, 16, 16);
     const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
 
     this.marker = new THREE.Mesh(markerGeometry, markerMaterial);

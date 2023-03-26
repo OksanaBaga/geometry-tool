@@ -20,14 +20,13 @@ class TriangleShape extends BaseShape {
     const geometry = new THREE.ShapeGeometry(shape);
 
     // Scale the geometry to the desired width and height
-    geometry.scale(width / height, 1, 1);
+    geometry.scale(width / height, 1, 0);
 
     // Center the geometry within the bounding box
-    geometry.translate(-width / 2 - 1, -height / 2 + 1, 0);
+    geometry.translate(-width / 2 - 0.5, -height / 2 + 0.5, 0);
 
     this.material = new THREE.MeshBasicMaterial({ color });
     this.shape = new THREE.Mesh(geometry, this.material);
-    this.shape.position.set(100, -100, 0);
   }
 }
 

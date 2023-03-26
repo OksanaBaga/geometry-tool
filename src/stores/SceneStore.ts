@@ -19,7 +19,6 @@ class SceneStore implements ISceneStore {
   private renderer: THREE.WebGLRenderer;
   private raycaster: THREE.Raycaster;
   private marker?: THREE.Mesh;
-  private dot?: THREE.Mesh;
 
   // Shape props
   private draggingOffset?: THREE.Vector3;
@@ -27,7 +26,7 @@ class SceneStore implements ISceneStore {
   private selectedShape?: IShape;
   private shapes: IShape[];
 
-  private containerBounds: { width: number; height: number };
+  private aspect: number;
 
   private rootStore: IRootStore;
 
@@ -37,36 +36,26 @@ class SceneStore implements ISceneStore {
     this.isShapeDragging = false;
 
     const container = document.getElementById('canvas-renderer');
-    const width =
-      container?.offsetWidth ||
-      this.rootStore.canvasRef?.width ||
-      window.innerWidth;
-    const height =
-      container?.offsetHeight ||
-      this.rootStore.canvasRef?.height ||
-      window.innerHeight;
-    this.containerBounds = { width, height };
 
     // Create a Scene and Camera
     this.scene = new THREE.Scene();
 
     // Create an orthographic camera with a visible range of 1 to 1000
+    this.aspect = window.innerWidth / window.innerHeight;
     this.camera = new THREE.OrthographicCamera(
-      -width / 2,
-      width / 2,
-      height / 2,
-      -height / 2,
-      1,
-      1000
+      -1 * this.aspect, // left
+      this.aspect, // right
+      1, // top
+      -1, // bottom
+      0.1, // near
+      10 // far
     );
 
     // Set the camera position
-    this.camera.position.z = 10;
+    this.camera.position.set(0, 0, 1);
 
     // Create a Raycaster
     this.raycaster = new THREE.Raycaster();
-    this.raycaster.near = this.camera.near;
-    this.raycaster.far = this.camera.far;
 
     // Create a vector representing the mouse position
     this.mouse = new THREE.Vector2();
@@ -77,8 +66,9 @@ class SceneStore implements ISceneStore {
       canvas: this.rootStore.canvasRef,
     });
 
+    this.renderer.setPixelRatio(window.devicePixelRatio);
     // Set renderer side depends on the container size
-    this.renderer.setSize(width, height);
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
     // Apply the Renderer to the DOM
     container?.appendChild(this.renderer.domElement);
 
@@ -102,7 +92,7 @@ class SceneStore implements ISceneStore {
   /** Public Methods */
 
   public addShape(shapeType: TShape): void {
-    const shape = this.getShape(shapeType, DEFAULT_COLOR, 200);
+    const shape = this.getShape(shapeType, DEFAULT_COLOR, 0.5);
 
     if (!shape) return;
 
@@ -129,26 +119,26 @@ class SceneStore implements ISceneStore {
   };
 
   private addMarker(): void {
-    // Marker to highlight the mouse.
-    const markerGeometry = new THREE.SphereGeometry(25, 16, 16);
-    const markerMaterial = new THREE.MeshBasicMaterial({ color: '#ffff00' });
-    // Dot that follows mouse
-    const dotGeometry = new THREE.SphereGeometry(5, 16, 16);
-    const dotMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    // Marker that follows mouse
+    const markerGeometry = new THREE.SphereGeometry(0.01, 16, 16);
+    const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
 
     this.marker = new THREE.Mesh(markerGeometry, markerMaterial);
-    this.dot = new THREE.Mesh(dotGeometry, dotMaterial);
     this.scene.add(this.marker);
-    this.scene.add(this.dot);
   }
 
   private setMarkerPosition(x: number, y: number): void {
-    if (!this.marker || !this.dot) {
+    if (
+      this.rootStore.editToolStore.selectedTool?.type !==
+      EditToolTypes.CLOSEST_POINT
+    )
+      return;
+
+    if (!this.marker) {
       this.addMarker();
     }
 
-    this.marker?.position.set(this.mouse.x, this.mouse.y, 0);
-    this.dot?.position.set(x, y, 0);
+    this.marker?.position.set(x, y, 0);
   }
 
   private getShape(
@@ -207,8 +197,6 @@ class SceneStore implements ISceneStore {
     // Calculate the intersection between the ray and the shape
     const intersects = this.getShapesIntersects();
 
-    console.log(111, intersects, this.mouse);
-
     // If the ray intersects with the shape, log the shape object to the console
     if (intersects.length > 0) {
       const objectId = intersects[0].object.uuid;
@@ -223,24 +211,20 @@ class SceneStore implements ISceneStore {
   }
 
   private normalizeMouse(event: MouseEvent): void {
-    const { width, height } = this.containerBounds;
-    const bounds = this.renderer.domElement.getBoundingClientRect();
-    // // Calculate the mouse position in normalized device coordinates
-    const x = event.clientX - bounds.x - width / 2;
-    const y = -(event.clientY - bounds.y - height / 2);
-
-    // this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    // this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    // Calculate the mouse position in normalized device coordinates
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    const mouseX = x * this.aspect;
+    const mouseY = y;
 
     this.mouse.set(x, y);
-
-    console.log(1111, x, y, this.mouse);
 
     // Set the ray's origin and direction based on the mouse position and camera orientation
     this.raycaster.setFromCamera(this.mouse, this.camera);
 
     // Update the position of the points object to the leftmost top point of the cursor
-    this.setMarkerPosition(this.mouse.x, this.mouse.y);
+    this.setMarkerPosition(mouseX, mouseY);
   }
 
   private setSelectedShape(shape?: IShape): void {
@@ -308,16 +292,15 @@ class SceneStore implements ISceneStore {
   /** Mouse Events */
 
   private onResize(): void {
-    const container = document.getElementById('canvas-renderer');
-    const width =
-      container?.offsetWidth ||
-      this.rootStore.canvasRef?.width ||
-      window.innerWidth;
-    const height =
-      container?.offsetHeight ||
-      this.rootStore.canvasRef?.height ||
-      window.innerHeight;
-    this.containerBounds = { width, height };
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    // Update camera position on screen resize
+    this.aspect = width / height;
+    this.camera.left = -1 * this.aspect;
+    this.camera.right = this.aspect;
+    this.camera.top = 1;
+    this.camera.bottom = -1;
 
     this.camera.updateProjectionMatrix();
     // Change the Renderer size on screen resize
@@ -331,7 +314,8 @@ class SceneStore implements ISceneStore {
 
     // Clear mouse markers
     this.marker && this.scene.remove(this.marker);
-    this.dot && this.scene.remove(this.dot);
+
+    this.marker = undefined;
   }
 
   private onMouseMove(event: MouseEvent): void {
