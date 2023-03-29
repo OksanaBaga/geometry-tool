@@ -11,6 +11,7 @@ import { DrawerHeader, DrawerStyled } from './LeftNav.styles';
 import EditionToolList from '../EditionToolList/EditionToolList';
 import AdditionToolList from '../AdditionToolList/AdditionToolList';
 import { useRootStore } from '../../context/AppStateContext';
+import SaveButton from '../SaveButton/SaveButton';
 
 const LeftNav = (): JSX.Element => {
   const theme = useTheme();
@@ -35,6 +36,10 @@ const LeftNav = (): JSX.Element => {
       <Divider />
 
       <AdditionToolList />
+
+      <Divider />
+
+      <SaveButton />
     </DrawerStyled>
   );
 };

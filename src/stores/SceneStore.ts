@@ -110,8 +110,21 @@ class SceneStore implements ISceneStore {
     return this.shapes.find((item: IShape) => item.shape.uuid === id);
   }
 
-  public dispose() {
+  public dispose(): void {
     this.unsubscribeFromMouseEvents();
+  }
+
+  public serialize(): string {
+    const data = this.shapes.map(({ shape }) => shape);
+    const stringData = JSON.stringify(data);
+
+    console.log(stringData);
+
+    return stringData;
+  }
+
+  public deserialize(data: any): void {
+    // TODO: Apply the data to the scene.
   }
 
   /** Private Methods */

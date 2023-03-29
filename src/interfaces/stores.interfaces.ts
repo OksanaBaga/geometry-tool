@@ -19,6 +19,8 @@ export type IAddToolStore = IToolStore; // TODO: Extend later
 export interface ISceneStore {
   addShape(shapeType: TShape): void;
   getShapeById(id: string): IShape | undefined;
+  serialize(): string;
+  deserialize(data: any): void;
 }
 
 export interface IRootStore {

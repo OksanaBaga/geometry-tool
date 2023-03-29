@@ -5,6 +5,7 @@ export enum EditToolTypes {
   TRIANGLE = 'TRIANGLE',
   SQUARE = 'SQUARE',
   HEXAGON = 'HEXAGON',
+  SAVE = 'SAVE',
 }
 
 export type TShape =
