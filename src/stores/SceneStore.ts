@@ -40,6 +40,8 @@ class SceneStore implements ISceneStore {
     // Create a Scene and Camera
     this.scene = new THREE.Scene();
 
+    const near = 0.1;
+    const far = 10;
     // Create an orthographic camera with a visible range of 1 to 1000
     this.aspect = window.innerWidth / window.innerHeight;
     this.camera = new THREE.OrthographicCamera(
@@ -47,8 +49,8 @@ class SceneStore implements ISceneStore {
       this.aspect, // right
       1, // top
       -1, // bottom
-      0.1, // near
-      10 // far
+      near,
+      far
     );
 
     // Set the camera position
@@ -56,6 +58,8 @@ class SceneStore implements ISceneStore {
 
     // Create a Raycaster
     this.raycaster = new THREE.Raycaster();
+    this.raycaster.near = near;
+    this.raycaster.far = far;
 
     // Create a vector representing the mouse position
     this.mouse = new THREE.Vector2();

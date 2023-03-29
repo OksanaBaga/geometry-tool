@@ -31,19 +31,20 @@ class BaseShape implements IShape {
 
   onKeyDown(event: KeyboardEvent): void {
     const delta = 0.1; // adjust the movement distance as needed
+    const { x, y, z } = this.shape.position;
 
     switch (event.code) {
       case 'ArrowUp':
-        this.shape.position.y += delta;
+        this.setPosition(new THREE.Vector3(x, y + delta, z));
         break;
       case 'ArrowDown':
-        this.shape.position.y -= delta;
+        this.setPosition(new THREE.Vector3(x, y - delta, z));
         break;
       case 'ArrowLeft':
-        this.shape.position.x -= delta;
+        this.setPosition(new THREE.Vector3(x - delta, y, z));
         break;
       case 'ArrowRight':
-        this.shape.position.x += delta;
+        this.setPosition(new THREE.Vector3(x + delta, y, z));
         break;
       default:
         break;
