@@ -1,47 +1,41 @@
-## Technical decisions
-Project is using **React (TypeScript)** framework.
-For styling **MUI** was chosen as it will cover all needs.
-**MobX** was chosen for state management because the author is more experienced in it.
+# Geometry tool
+This project is a web application built with React (TypeScript) that uses MUI for styling, MobX for state management, and Three.js for 3D rendering.
 
-## Available Scripts
+##Design Overview
+The application is designed to display 3D models in a web browser. The front-end is built with React (TypeScript) and uses MUI for styling. I chose MUI because it provides a wide range of pre-built components and styles that can be easily customized.
 
-In the project directory, you can run:
+I chose MobX for state management because I have more experience with it and found it to be a good fit for this project. MobX provides a simple and intuitive way to manage state, which is important when working with complex 3D models.
 
-### `npm start`
+For 3D rendering, I chose Three.js because it is a powerful and widely-used library that provides many useful features, including lighting, shading, and animation. Three.js also has a large community and many examples and tutorials available online.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+##Likes and Dislikes
+Overall, I am pleased with how the application turned out. I are particularly proud of the smooth and responsive 3D rendering, as well as the intuitive user interface. I also found MobX to be a good choice for state management, as it allowed us to easily update and synchronize state between components.
+Also, using inheritance for shapes allows us to create new shapes without much code rewriting quickly.
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+A couple of areas I'd like to improve are the layering or validation to prevent intersecting/overlapping shapes, and improving the position of the marker after the shape is moved (there is a bug: the nearest point is displayed with an offset after the shape is dragged). I'm looking for ways to optimize these features in future versions of the app.  Also, I would like to write Unit tests for each part of the project.
 
-### `npm test`
+##New Technologies
+While working on this project, I gained new experience with Three.js, which I had not used much before, and found it to be a useful tool for 3D rendering.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+##Project set up
 
-### `npm run build`
+1. **Clone the repository:** The first step is to clone the repository. To do this, open your terminal or command prompt and navigate to the directory where you want to clone the repository. Once you are in the directory, run the following command:
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+    ```
+    git clone https://github.com/OksanaBaga/geometry-tool.git
+    ```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+2. **Install dependencies:** Once you have cloned the repository, navigate to the project directory using your terminal or command prompt. Once you are in the project directory, run the following command:
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+    ```
+    npm install
+    ```
+    This will install all the dependencies required by the project. The dependencies are specified in the package.json file.
 
-### `npm run eject`
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+3. **Start the project:** After the dependencies are installed, run the following command:
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+    ```
+    npm start
+    ```
+    This will start the project and open it in your default web browser. The start command is specified in the scripts section of the package.json file.
